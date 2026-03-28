@@ -162,3 +162,30 @@ impl Rule for PathScopedRules {
         }
     }
 }
+
+// ── Rule 4.7: Subagent configuration ────────────────────────────────
+
+pub struct SubagentConfig;
+
+impl Rule for SubagentConfig {
+    fn id(&self) -> &str { "4.7" }
+    fn name(&self) -> &str { "Subagent configuration (.claude/agents/)" }
+    fn dimension(&self) -> Dimension { Dimension::Tooling }
+    fn severity(&self) -> Severity { Severity::Low }
+
+    fn check(&self, ctx: &ProjectContext) -> RuleResult {
+        if ctx.has_claude_agents_dir {
+            self.pass()
+        } else {
+            self.warn(
+                "No .claude/agents/ directory for custom subagents",
+                Suggestion {
+                    priority: SuggestionPriority::NiceToHave,
+                    title: "Create custom subagents".into(),
+                    description: "Create .claude/agents/ with .md files defining specialized subagents. Subagents isolate expensive operations (research, testing) from your main context window.".into(),
+                    effort: Effort::Hour,
+                },
+            )
+        }
+    }
+}

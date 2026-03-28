@@ -8,7 +8,17 @@
       "Read(//Users/vivekyadav/Documents/Projects/claude/claude_native_projects/**)",
       "Bash(ls tests/*.rs)",
       "Bash(find src:*)",
-      "Bash(xargs -I{} echo \"{} test lines\")"
+      "Bash(xargs -I{} echo \"{} test lines\")",
+      "Bash(git push:*)",
+      "Bash(gh api:*)",
+      "Bash(gh repo:*)",
+      "Bash(npm list:*)",
+      "Bash(netlify status:*)",
+      "Bash(netlaunch whoami:*)",
+      "Bash(netlaunch deploy:*)",
+      "WebFetch(domain:getaiready.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:factory.ai)"
     ]
   }
 }

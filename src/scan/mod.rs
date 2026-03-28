@@ -63,10 +63,13 @@ pub struct ProjectContext {
     pub package_json: Option<serde_json::Value>,
     pub package_manifests: Vec<ManifestInfo>,
 
+    pub agents_md_content: Option<String>,
+
     // Derived analysis
     pub has_claude_dir: bool,
     pub has_claude_rules_dir: bool,
     pub has_claude_skills_dir: bool,
+    pub has_claude_agents_dir: bool,
     pub subdirectory_claude_mds: Vec<PathBuf>,
     pub test_files: Vec<PathBuf>,
     pub ci_configs: Vec<PathBuf>,

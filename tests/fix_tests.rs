@@ -28,6 +28,7 @@ fn fix_creates_missing_files() {
 fn fix_skips_existing_files() {
     let (_dir, mut ctx) = helpers::scan_project(&[
         ("CLAUDE.md", "# Test\nBuild: `make`\nTest: `make test`"),
+        ("AGENTS.md", "# Test\n## Build\n- Build: `make`"),
         (".claudeignore", "target/\nCargo.lock\n"),
         (".claude/settings.json", r#"{"permissions":{"allow":["Bash(cargo:*)"]}}"#),
         (".claude/rules/.gitkeep", ""),

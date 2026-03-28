@@ -24,6 +24,7 @@ fn init_creates_missing_files() {
 fn init_skips_existing_files() {
     let (_dir, mut ctx) = helpers::scan_project(&[
         ("CLAUDE.md", "# Existing"),
+        ("AGENTS.md", "# Agents"),
         (".claudeignore", "target/"),
         (".claude/settings.json", "{}"),
         ("src/main.rs", "fn main() {}"),

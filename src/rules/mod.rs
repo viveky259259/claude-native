@@ -223,6 +223,7 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
     rules.push(Box::new(foundation::ClaudeignoreExists));
     rules.push(Box::new(foundation::ClaudeDirExists));
     rules.push(Box::new(foundation::SettingsJsonExists));
+    rules.push(Box::new(foundation::AgentsMdExists));
 
     // Context Efficiency (2.1 - 2.7)
     rules.push(Box::new(context::NoMegaFiles));
@@ -249,6 +250,7 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
     rules.push(Box::new(tooling::CustomSkills));
     rules.push(Box::new(tooling::PermissionAllowList));
     rules.push(Box::new(tooling::PathScopedRules));
+    rules.push(Box::new(tooling::SubagentConfig));
 
     // Code Quality (5.1 - 5.8)
     rules.push(Box::new(quality::TypeAnnotationsExist));

@@ -22,10 +22,12 @@ pub fn build_context(root: &Path) -> Result<ProjectContext> {
         claude_md_content: keys.claude_md_content, claude_md_path: keys.claude_md_path,
         claudeignore_content: keys.claudeignore_content,
         readme_content: keys.readme_content,
+        agents_md_content: keys.agents_md_content,
         settings_json: keys.settings_json, package_json: keys.package_json,
         package_manifests: scan.package_manifests,
         has_claude_dir: claude.has_dir, has_claude_rules_dir: claude.has_rules,
         has_claude_skills_dir: claude.has_skills,
+        has_claude_agents_dir: claude.has_agents,
         subdirectory_claude_mds: scan.subdirectory_claude_mds,
         test_files: scan.test_files, ci_configs: scan.ci_configs,
         env_files: scan.env_files, lock_files: scan.lock_files,
@@ -56,6 +58,7 @@ fn scan_directory(root: &Path) -> Result<ScanResult> {
 struct KeyFiles {
     claude_md_content: Option<String>, claude_md_path: Option<PathBuf>,
     claudeignore_content: Option<String>, readme_content: Option<String>,
+    agents_md_content: Option<String>,
     settings_json: Option<serde_json::Value>, package_json: Option<serde_json::Value>,
     ignore_set: Option<GlobSet>, ignore_patterns: Vec<String>,
     root_file_cache: std::collections::HashMap<String, String>,
@@ -69,15 +72,16 @@ fn read_key_files(root: &Path) -> KeyFiles {
     let (ignore_set, ignore_patterns) = build_ignore_set(&claudeignore_content);
     let readme_content = std::fs::read_to_string(root.join("README.md"))
         .or_else(|_| std::fs::read_to_string(root.join("readme.md"))).ok();
+    let agents_md_content = std::fs::read_to_string(root.join("AGENTS.md")).ok();
     let settings_json = std::fs::read_to_string(root.join(".claude/settings.json"))
         .ok().and_then(|s| serde_json::from_str(&s).ok());
     let package_json = std::fs::read_to_string(root.join("package.json"))
         .ok().and_then(|s| serde_json::from_str(&s).ok());
     KeyFiles { claude_md_content, claude_md_path, claudeignore_content, readme_content,
-        settings_json, package_json, ignore_set, ignore_patterns, root_file_cache }
+        agents_md_content, settings_json, package_json, ignore_set, ignore_patterns, root_file_cache }
 }
 
-struct ClaudeConfig { has_dir: bool, has_rules: bool, has_skills: bool, mcp_path: Option<PathBuf> }
+struct ClaudeConfig { has_dir: bool, has_rules: bool, has_skills: bool, has_agents: bool, mcp_path: Option<PathBuf> }
 
 fn detect_claude_config(root: &Path) -> ClaudeConfig {
     let dir = root.join(".claude");
@@ -85,6 +89,7 @@ fn detect_claude_config(root: &Path) -> ClaudeConfig {
         has_dir: dir.is_dir(),
         has_rules: dir.join("rules").is_dir(),
         has_skills: dir.join("skills").is_dir(),
+        has_agents: dir.join("agents").is_dir(),
         mcp_path: if dir.join(".mcp.json").exists() { Some(dir.join(".mcp.json")) } else { None },
     }
 }

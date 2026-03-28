@@ -18,6 +18,12 @@ pub fn init_project(ctx: &ProjectContext) -> Result<Vec<String>> {
         created.push("CLAUDE.md".into());
     }
 
+    if !root.join("AGENTS.md").exists() {
+        let content = generate_agents_md(ctx, pt);
+        fs::write(root.join("AGENTS.md"), content)?;
+        created.push("AGENTS.md".into());
+    }
+
     if !root.join(".claudeignore").exists() {
         let content = generate_claudeignore(ctx, pt);
         fs::write(root.join(".claudeignore"), content)?;
@@ -37,6 +43,31 @@ pub fn init_project(ctx: &ProjectContext) -> Result<Vec<String>> {
     }
 
     Ok(created)
+}
+
+fn generate_agents_md(ctx: &ProjectContext, pt: Option<&ProjectType>) -> String {
+    let project_name = ctx.root.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("Project");
+    let (build_cmd, test_cmd) = detect_commands(ctx, pt);
+
+    format!(
+        "# {project_name}\n\
+         \n\
+         > Universal AI agent instructions (AGENTS.md standard)\n\
+         \n\
+         ## Build & Test\n\
+         \n\
+         - Build: `{build_cmd}`\n\
+         - Test: `{test_cmd}`\n\
+         \n\
+         ## Guidelines\n\
+         \n\
+         - Follow existing code patterns and conventions\n\
+         - Write tests for new functionality\n\
+         - Keep functions focused and under 80 lines\n\
+         - Document non-obvious decisions with comments explaining \"why\"\n"
+    )
 }
 
 fn generate_claude_md(ctx: &ProjectContext, pt: Option<&ProjectType>) -> String {

@@ -5,7 +5,7 @@ use clap::Parser;
 use owo_colors::OwoColorize;
 
 use claude_native::cli::{Cli, OutputFormat};
-use claude_native::{detection, diff, fix, init, output, rules, scan, scoring, token_cost, watch};
+use claude_native::{config, detection, diff, fix, init, output, rules, scan, scoring, token_cost, watch};
 
 fn main() {
     if let Err(e) = run() {
@@ -40,10 +40,14 @@ fn run() -> Result<()> {
         return run_init(&ctx, &pt);
     }
 
+    // Load config
+    let cfg = config::Config::load(&path);
+    let disabled = cfg.disabled_set();
+
     // Score the project
     let all = rules::all_rules();
     let results: Vec<_> = all.iter()
-        .filter(|r| r.applies_to(&pt))
+        .filter(|r| r.applies_to(&pt) && !disabled.contains(r.id()))
         .map(|r| r.check(&ctx))
         .collect();
     let mut scorecard = scoring::calculate(results, &pt);
@@ -54,6 +58,12 @@ fn run() -> Result<()> {
     // --fix: auto-apply quick wins
     if cli.fix {
         return run_fix(&ctx, &scorecard, &path);
+    }
+
+    // --badge: output shields.io badge URL
+    if cli.badge {
+        print_badge(&scorecard);
+        return Ok(());
     }
 
     render_output(&scorecard, &cli.format)?;
@@ -108,6 +118,30 @@ fn run_fix(
         format!("+{:.0}", delta).green(),
     );
     Ok(())
+}
+
+fn print_badge(sc: &scoring::Scorecard) {
+    let score = sc.total_score as u32;
+    let grade = format!("{}", sc.grade);
+    let color = match sc.grade {
+        scoring::Grade::APlus | scoring::Grade::A => "brightgreen",
+        scoring::Grade::B => "green",
+        scoring::Grade::C => "yellow",
+        scoring::Grade::D => "orange",
+        scoring::Grade::F => "red",
+    };
+    let label = "claude--native";
+    let message = format!("{grade}%20({score}%2F100)");
+    let url = format!("https://img.shields.io/badge/{label}-{message}-{color}");
+
+    println!("Badge URL:");
+    println!("  {url}");
+    println!();
+    println!("Markdown:");
+    println!("  ![Claude Native Score]({url})");
+    println!();
+    println!("HTML:");
+    println!("  <img src=\"{url}\" alt=\"Claude Native Score\">");
 }
 
 fn render_output(sc: &scoring::Scorecard, fmt: &OutputFormat) -> Result<()> {

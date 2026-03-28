@@ -33,6 +33,10 @@ pub struct Cli {
     /// Watch for file changes and re-score automatically
     #[arg(long)]
     pub watch: bool,
+
+    /// Output a shields.io badge URL for your README
+    #[arg(long)]
+    pub badge: bool,
 }
 
 #[derive(Debug, Clone, clap::ValueEnum)]
