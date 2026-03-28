@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>claude-native — Make any project AI-optimized</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #1e2a45;
+            --bg-code: #0f1729;
+            --text: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --text-dim: #6b6b80;
+            --accent: #d4a574;
+            --accent-hover: #e8be94;
+            --green: #4ade80;
+            --yellow: #fbbf24;
+            --red: #f87171;
+            --blue: #60a5fa;
+            --border: #2a2a45;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed; top: 0; width: 100%; z-index: 100;
+            background: rgba(26, 26, 46, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+        .nav-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 64px;
+        }
+        .nav-logo {
+            font-size: 1.1rem; font-weight: 700;
+            color: var(--accent); text-decoration: none;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .nav-logo span { color: var(--text-secondary); font-weight: 400; }
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none;
+            font-size: 0.9rem; transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta {
+            background: var(--accent); color: var(--bg); border: none;
+            padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.85rem;
+            font-weight: 600; cursor: pointer; text-decoration: none;
+            transition: background 0.2s;
+        }
+        .nav-cta:hover { background: var(--accent-hover); }
+
+        /* Hero */
+        .hero {
+            padding: 10rem 2rem 6rem;
+            text-align: center;
+            background: linear-gradient(180deg, var(--bg) 0%, var(--bg-secondary) 100%);
+        }
+        .hero-badge {
+            display: inline-block; padding: 0.3rem 0.8rem;
+            background: rgba(212, 165, 116, 0.1);
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 20px; font-size: 0.8rem; color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+        .hero h1 {
+            font-size: 3.5rem; font-weight: 800;
+            letter-spacing: -0.03em; line-height: 1.1;
+            max-width: 800px; margin: 0 auto 1.5rem;
+        }
+        .hero h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--accent), #e8be94);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 1.2rem; color: var(--text-secondary);
+            max-width: 600px; margin: 0 auto 2.5rem;
+        }
+        .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .btn-primary {
+            background: var(--accent); color: var(--bg);
+            padding: 0.75rem 1.5rem; border-radius: 8px;
+            font-size: 1rem; font-weight: 600; text-decoration: none;
+            transition: all 0.2s; border: none; cursor: pointer;
+        }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-secondary {
+            background: transparent; color: var(--text);
+            padding: 0.75rem 1.5rem; border-radius: 8px;
+            font-size: 1rem; font-weight: 500; text-decoration: none;
+            border: 1px solid var(--border); transition: all 0.2s;
+        }
+        .btn-secondary:hover { border-color: var(--text-secondary); }
+
+        /* Install banner */
+        .install-banner {
+            background: var(--bg-code); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1rem 1.5rem;
+            max-width: 500px; margin: 2rem auto 0;
+            display: flex; align-items: center; justify-content: space-between;
+            font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.95rem;
+        }
+        .install-banner code { color: var(--green); }
+        .install-banner .copy-btn {
+            background: none; border: none; color: var(--text-dim);
+            cursor: pointer; font-size: 0.85rem; transition: color 0.2s;
+        }
+        .install-banner .copy-btn:hover { color: var(--text); }
+
+        /* Sections */
+        section { padding: 5rem 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section-label {
+            font-size: 0.8rem; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem;
+        }
+        .section-title {
+            font-size: 2.2rem; font-weight: 700; margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+        .section-desc {
+            font-size: 1.1rem; color: var(--text-secondary);
+            max-width: 600px; margin-bottom: 3rem;
+        }
+
+        /* Feature grid */
+        .features-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        .feature-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.5rem;
+            transition: border-color 0.2s;
+        }
+        .feature-card:hover { border-color: var(--accent); }
+        .feature-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; margin-bottom: 1rem;
+        }
+        .feature-card h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+        .feature-card p { font-size: 0.9rem; color: var(--text-secondary); }
+
+        /* Score demo */
+        .score-demo {
+            background: var(--bg-code); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 2rem; overflow-x: auto;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem; line-height: 1.8;
+        }
+        .dim { color: var(--text-dim); }
+        .grn { color: var(--green); }
+        .yel { color: var(--yellow); }
+        .red { color: var(--red); }
+        .bld { font-weight: 700; }
+        .acc { color: var(--accent); }
+
+        /* Dimensions */
+        .dimensions-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 1rem; margin-bottom: 3rem;
+        }
+        .dim-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.2rem; text-align: center;
+        }
+        .dim-card .weight {
+            font-size: 2rem; font-weight: 700; color: var(--accent);
+        }
+        .dim-card .label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.3rem; }
+
+        /* Project types */
+        .types-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+        }
+        .type-chip {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem 1rem;
+            font-size: 0.85rem; text-align: center;
+        }
+        .type-chip .signal { color: var(--text-dim); font-size: 0.75rem; margin-top: 0.3rem; }
+
+        /* Code blocks */
+        .code-section { background: var(--bg-secondary); }
+        pre {
+            background: var(--bg-code); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.5rem; overflow-x: auto;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem; line-height: 1.7; margin: 1rem 0;
+        }
+        pre .comment { color: var(--text-dim); }
+        pre .cmd { color: var(--green); }
+        pre .flag { color: var(--accent); }
+        pre .output { color: var(--text-secondary); }
+
+        /* Docs layout */
+        .docs-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+        .docs-grid h3 {
+            font-size: 1.1rem; margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+        }
+
+        /* Grade scale */
+        .grade-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .grade-table th, .grade-table td {
+            padding: 0.6rem 1rem; text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .grade-table th { color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; }
+        .grade-badge {
+            display: inline-block; padding: 0.15rem 0.5rem;
+            border-radius: 4px; font-weight: 700; font-size: 0.85rem;
+        }
+
+        /* Rules table */
+        .rules-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        .rules-table th, .rules-table td {
+            padding: 0.5rem 0.75rem; text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .rules-table th { color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; }
+        .severity-critical { color: var(--red); font-weight: 700; }
+        .severity-high { color: var(--red); }
+        .severity-medium { color: var(--yellow); }
+        .severity-low { color: var(--text-dim); }
+
+        /* Footer */
+        footer {
+            padding: 3rem 2rem; border-top: 1px solid var(--border);
+            text-align: center; color: var(--text-dim); font-size: 0.85rem;
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .features-grid { grid-template-columns: 1fr; }
+            .dimensions-grid { grid-template-columns: repeat(2, 1fr); }
+            .types-grid { grid-template-columns: repeat(2, 1fr); }
+            .docs-grid { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 2.5rem; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <div class="nav-inner">
+        <a class="nav-logo" href="#">claude-native <span>v0.1.0</span></a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#install">Install</a>
+            <a href="#usage">Usage</a>
+            <a href="#scoring">Scoring</a>
+            <a href="#rules">Rules</a>
+            <a href="#examples">Examples</a>
+        </div>
+        <a class="nav-cta" href="https://crates.io/crates/claude-native">Install</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+    <div class="hero-badge">95 rules &middot; 14 project types &middot; Built in Rust</div>
+    <h1>Make any project <em>Claude Native</em></h1>
+    <p>Scan, score, and fix your project for optimal AI-assisted development. Lower token cost. Higher performance. One command.</p>
+    <div class="hero-actions">
+        <a href="#install" class="btn-primary">Get Started</a>
+        <a href="#examples" class="btn-secondary">See Examples</a>
+    </div>
+    <div class="install-banner">
+        <code>cargo install claude-native</code>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('cargo install claude-native');this.textContent='Copied!'">Copy</button>
+    </div>
+</div>
+
+<!-- Features -->
+<section id="features">
+    <div class="container">
+        <div class="section-label">Features</div>
+        <div class="section-title">Everything you need to optimize for Claude</div>
+        <div class="section-desc">One CLI that scans, scores, and fixes your project structure for AI-assisted development.</div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(74,222,128,0.1);color:var(--green);">&#9874;</div>
+                <h3>95 Rules</h3>
+                <p>Comprehensive checks across Foundation, Context Efficiency, Navigation, Tooling, and Code Quality.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(96,165,250,0.1);color:var(--blue);">&#9782;</div>
+                <h3>14 Project Types</h3>
+                <p>Auto-detects Flutter, Next.js, Django, Terraform, Serverless, ML, Game Dev, and more. Adjusts scoring weights per type.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(212,165,116,0.1);color:var(--accent);">&#9889;</div>
+                <h3>--init Bootstrap</h3>
+                <p>One command generates CLAUDE.md, .claudeignore, and settings.json tailored to your project type.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(251,191,36,0.1);color:var(--yellow);">&#9881;</div>
+                <h3>--fix Auto-repair</h3>
+                <p>Auto-apply quick-win suggestions. Creates missing files, appends ignore patterns. Never overwrites.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(248,113,113,0.1);color:var(--red);">&#916;</div>
+                <h3>--diff Preview</h3>
+                <p>See exactly what score improvement --fix would achieve before making any changes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(74,222,128,0.1);color:var(--green);">&#8634;</div>
+                <h3>--watch Live</h3>
+                <p>Real-time re-scoring as you edit files. Watch your score climb while you work.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Install -->
+<section id="install" class="code-section">
+    <div class="container">
+        <div class="section-label">Installation</div>
+        <div class="section-title">Get started in seconds</div>
+        <div class="docs-grid">
+            <div>
+                <h3>From crates.io (recommended)</h3>
+                <pre><span class="comment"># Install the CLI</span>
+<span class="cmd">cargo install claude-native</span>
+
+<span class="comment"># Verify installation</span>
+<span class="cmd">claude-native --version</span>
+<span class="output">claude-native 0.1.0</span></pre>
+
+                <h3>From source</h3>
+                <pre><span class="cmd">git clone https://github.com/viveky259259/claude-native.git</span>
+<span class="cmd">cd claude-native</span>
+<span class="cmd">cargo install --path .</span></pre>
+            </div>
+            <div>
+                <h3>Requirements</h3>
+                <ul style="list-style:none;color:var(--text-secondary);font-size:0.95rem;">
+                    <li style="margin-bottom:0.5rem;">&#10003; &nbsp;Rust 1.70+ (install via <a href="https://rustup.rs" style="color:var(--accent)">rustup.rs</a>)</li>
+                    <li style="margin-bottom:0.5rem;">&#10003; &nbsp;Any OS (macOS, Linux, Windows)</li>
+                    <li style="margin-bottom:0.5rem;">&#10003; &nbsp;No runtime dependencies</li>
+                </ul>
+                <h3 style="margin-top:2rem;">Quick Start</h3>
+                <pre><span class="comment"># Score your current project</span>
+<span class="cmd">claude-native</span>
+
+<span class="comment"># Bootstrap a new project to Claude Native</span>
+<span class="cmd">claude-native --init</span>
+
+<span class="comment"># Auto-fix quick wins</span>
+<span class="cmd">claude-native --fix</span></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Usage -->
+<section id="usage">
+    <div class="container">
+        <div class="section-label">Usage</div>
+        <div class="section-title">CLI Reference</div>
+        <pre style="max-width:700px;"><span class="cmd">claude-native</span> <span class="flag">[OPTIONS]</span> <span class="flag">[PATH]</span>
+
+<span class="comment">Arguments:</span>
+  <span class="flag">[PATH]</span>              Project directory to scan <span class="dim">[default: .]</span>
+
+<span class="comment">Options:</span>
+  <span class="flag">-f, --failures-only</span> Only show failures and suggestions
+  <span class="flag">-o, --format</span>        Output format <span class="dim">[terminal, json]</span>
+  <span class="flag">    --init</span>          Bootstrap CLAUDE.md, .claudeignore, settings.json
+  <span class="flag">    --fix</span>           Auto-apply quick-win suggestions
+  <span class="flag">    --diff</span>          Preview score improvement
+  <span class="flag">    --watch</span>         Live re-scoring on file changes
+  <span class="flag">-h, --help</span>          Print help
+  <span class="flag">-V, --version</span>       Print version
+
+<span class="comment">Exit codes:</span>
+  <span class="grn">0</span>  Score >= 40
+  <span class="red">1</span>  Score &lt; 40 (CI integration: fail build)</pre>
+
+        <div class="docs-grid" style="margin-top:2rem;">
+            <div>
+                <h3>CI Integration</h3>
+                <pre><span class="comment"># GitHub Actions</span>
+- name: Check Claude Native Score
+  run: |
+    <span class="cmd">cargo install claude-native</span>
+    <span class="cmd">claude-native -o json</span> > score.json
+    <span class="cmd">claude-native</span> <span class="comment"># exits 1 if &lt;40</span></pre>
+            </div>
+            <div>
+                <h3>JSON Output</h3>
+                <pre><span class="cmd">claude-native -o json</span>
+<span class="output">{
+  "project_type": "Backend (Django)",
+  "score": 72.0,
+  "grade": "B",
+  "dimensions": [...],
+  "suggestions_count": 5
+}</span></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Scoring -->
+<section id="scoring" class="code-section">
+    <div class="container">
+        <div class="section-label">Scoring</div>
+        <div class="section-title">5 dimensions, weighted by project type</div>
+        <div class="section-desc">Weights adjust automatically based on your detected project type.</div>
+
+        <div class="dimensions-grid">
+            <div class="dim-card"><div class="weight">25%</div><div class="label">Foundation</div></div>
+            <div class="dim-card"><div class="weight">25%</div><div class="label">Context Efficiency</div></div>
+            <div class="dim-card"><div class="weight">20%</div><div class="label">Navigation</div></div>
+            <div class="dim-card"><div class="weight">15%</div><div class="label">Tooling</div></div>
+            <div class="dim-card"><div class="weight">15%</div><div class="label">Code Quality</div></div>
+        </div>
+
+        <div class="docs-grid">
+            <div>
+                <h3>Grade Scale</h3>
+                <table class="grade-table">
+                    <tr><th>Score</th><th>Grade</th><th>Meaning</th></tr>
+                    <tr><td>90-100</td><td><span class="grade-badge" style="background:rgba(74,222,128,0.15);color:var(--green);">A+</span></td><td>Fully Claude Native</td></tr>
+                    <tr><td>80-89</td><td><span class="grade-badge" style="background:rgba(74,222,128,0.1);color:var(--green);">A</span></td><td>Claude Native</td></tr>
+                    <tr><td>70-79</td><td><span class="grade-badge" style="background:rgba(251,191,36,0.15);color:var(--yellow);">B</span></td><td>Claude Friendly</td></tr>
+                    <tr><td>60-69</td><td><span class="grade-badge" style="background:rgba(251,191,36,0.1);color:var(--yellow);">C</span></td><td>Claude Compatible</td></tr>
+                    <tr><td>40-59</td><td><span class="grade-badge" style="background:rgba(248,113,113,0.1);color:var(--red);">D</span></td><td>Claude Hostile</td></tr>
+                    <tr><td>0-39</td><td><span class="grade-badge" style="background:rgba(248,113,113,0.15);color:var(--red);">F</span></td><td>Not Claude Native</td></tr>
+                </table>
+            </div>
+            <div>
+                <h3>Severity Impact</h3>
+                <table class="grade-table">
+                    <tr><th>Severity</th><th>On Failure</th><th>On Warning</th></tr>
+                    <tr><td class="severity-critical">CRITICAL</td><td>Caps dimension at 30</td><td>-</td></tr>
+                    <tr><td class="severity-high">HIGH</td><td>-20 points</td><td>-10 points</td></tr>
+                    <tr><td class="severity-medium">MEDIUM</td><td>-10 points</td><td>-5 points</td></tr>
+                    <tr><td class="severity-low">LOW</td><td>-5 points</td><td>-2.5 points</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Project Types -->
+<section>
+    <div class="container">
+        <div class="section-label">Detection</div>
+        <div class="section-title">14 project types, auto-detected</div>
+        <div class="section-desc">Scoring weights shift per type. A Flutter project emphasizes Context Efficiency; a micro-repo emphasizes Code Quality.</div>
+        <div class="types-grid">
+            <div class="type-chip"><strong>Flutter</strong><div class="signal">pubspec.yaml</div></div>
+            <div class="type-chip"><strong>React Native</strong><div class="signal">react-native in package.json</div></div>
+            <div class="type-chip"><strong>Next.js</strong><div class="signal">next.config.*</div></div>
+            <div class="type-chip"><strong>Angular</strong><div class="signal">angular.json</div></div>
+            <div class="type-chip"><strong>Django</strong><div class="signal">manage.py</div></div>
+            <div class="type-chip"><strong>Express</strong><div class="signal">express in package.json</div></div>
+            <div class="type-chip"><strong>Go Service</strong><div class="signal">go.mod + cmd/</div></div>
+            <div class="type-chip"><strong>Terraform</strong><div class="signal">*.tf files</div></div>
+            <div class="type-chip"><strong>Serverless</strong><div class="signal">serverless.yml, wrangler.toml</div></div>
+            <div class="type-chip"><strong>ML / Data Science</strong><div class="signal">.ipynb + torch/tensorflow</div></div>
+            <div class="type-chip"><strong>Codegen Heavy</strong><div class="signal">.proto/.graphql + generated/</div></div>
+            <div class="type-chip"><strong>Doc Site</strong><div class="signal">docusaurus.config.*, mkdocs.yml</div></div>
+            <div class="type-chip"><strong>Monorepo</strong><div class="signal">pnpm-workspace.yaml, nx.json</div></div>
+            <div class="type-chip"><strong>Game Dev</strong><div class="signal">project.godot, Unity, Bevy</div></div>
+        </div>
+        <p style="color:var(--text-dim);font-size:0.85rem;margin-top:1rem;text-align:center;">
+            + compound flags: <strong>Polyglot</strong> (2+ languages) and <strong>Legacy</strong> (no tests, large files, no docs)
+        </p>
+    </div>
+</section>
+
+<!-- Rules Reference -->
+<section id="rules" class="code-section">
+    <div class="container">
+        <div class="section-label">Rules Reference</div>
+        <div class="section-title">35 base rules + 60 project-specific</div>
+
+        <div class="docs-grid">
+            <div>
+                <h3>Foundation (7 rules)</h3>
+                <table class="rules-table">
+                    <tr><td>1.1</td><td>CLAUDE.md must exist</td><td class="severity-critical">CRITICAL</td></tr>
+                    <tr><td>1.2</td><td>CLAUDE.md &lt;200 lines</td><td class="severity-high">HIGH</td></tr>
+                    <tr><td>1.3</td><td>Actionable instructions</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>1.4</td><td>Has build/test commands</td><td class="severity-high">HIGH</td></tr>
+                    <tr><td>1.5</td><td>.claudeignore exists</td><td class="severity-high">HIGH</td></tr>
+                    <tr><td>1.6</td><td>.claude/ directory exists</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>1.7</td><td>settings.json with permissions</td><td class="severity-medium">MEDIUM</td></tr>
+                </table>
+
+                <h3 style="margin-top:2rem;">Context Efficiency (7 rules)</h3>
+                <table class="rules-table">
+                    <tr><td>2.1</td><td>No mega-files (&gt;500 lines)</td><td class="severity-high">HIGH</td></tr>
+                    <tr><td>2.2</td><td>No mega-functions (&gt;80 lines)</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>2.3</td><td>Lock files in .claudeignore</td><td class="severity-high">HIGH</td></tr>
+                    <tr><td>2.4</td><td>Generated files ignored</td><td class="severity-high">HIGH</td></tr>
+                    <tr><td>2.5</td><td>No secrets in repo</td><td class="severity-critical">CRITICAL</td></tr>
+                    <tr><td>2.6</td><td>README &lt;300 lines</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>2.7</td><td>Subdirectory CLAUDE.md</td><td class="severity-low">LOW</td></tr>
+                </table>
+            </div>
+            <div>
+                <h3>Navigation (7 rules)</h3>
+                <table class="rules-table">
+                    <tr><td>3.1</td><td>Clear directory structure</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>3.2</td><td>Consistent file naming</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>3.3</td><td>Obvious entry points</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>3.4</td><td>Clear module boundaries</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>3.5</td><td>Predictable test locations</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>3.6</td><td>No deep nesting (&gt;4 levels)</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>3.7</td><td>Descriptive names</td><td class="severity-low">LOW</td></tr>
+                </table>
+
+                <h3 style="margin-top:2rem;">Tooling (6 rules)</h3>
+                <table class="rules-table">
+                    <tr><td>4.1</td><td>MCP servers configured</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>4.2</td><td>Auto-format hooks</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>4.3</td><td>Danger protection hooks</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>4.4</td><td>Custom skills</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>4.5</td><td>Permission allow-list</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>4.6</td><td>Path-scoped rules</td><td class="severity-low">LOW</td></tr>
+                </table>
+
+                <h3 style="margin-top:2rem;">Code Quality (8 rules)</h3>
+                <table class="rules-table">
+                    <tr><td>5.1</td><td>Type annotations</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>5.2</td><td>Tests exist</td><td class="severity-high">HIGH</td></tr>
+                    <tr><td>5.3</td><td>Descriptive test names</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>5.4</td><td>Consistent patterns</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>5.5</td><td>Comments explain "why"</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>5.6</td><td>No dead code</td><td class="severity-low">LOW</td></tr>
+                    <tr><td>5.7</td><td>Dependencies documented</td><td class="severity-medium">MEDIUM</td></tr>
+                    <tr><td>5.8</td><td>CI/CD pipeline</td><td class="severity-low">LOW</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Examples -->
+<section id="examples">
+    <div class="container">
+        <div class="section-label">Examples</div>
+        <div class="section-title">Real-world workflows</div>
+
+        <div class="docs-grid">
+            <div>
+                <h3>1. Score your project</h3>
+                <pre><span class="cmd">$ claude-native</span>
+
+<span class="dim">+----------------------------------------------------------+</span>
+<span class="dim">|</span>  Claude Native Score                                    <span class="dim">|</span>
+<span class="dim">+----------------------------------------------------------+</span>
+<span class="dim">|</span>  Project Type: <span class="acc">Backend (Django)</span>                         <span class="dim">|</span>
+<span class="dim">|</span>  Score: <span class="yel">72</span>/100  Grade: <span class="yel bld">B</span>                                <span class="dim">|</span>
+<span class="dim">|</span>  Claude Friendly - good foundation, notable gaps        <span class="dim">|</span>
+<span class="dim">+----------------------------------------------------------+</span></pre>
+
+                <h3>3. Auto-fix quick wins</h3>
+                <pre><span class="cmd">$ claude-native --fix</span>
+
+<span class="grn bld">Applied fixes:</span>
+  <span class="grn">+</span> Created CLAUDE.md
+  <span class="grn">+</span> Created .claudeignore
+  <span class="grn">+</span> Created .claude/settings.json
+  <span class="grn">+</span> Created .claude/rules/
+  <span class="grn">+</span> Created .claude/.mcp.json
+
+Score: 58 -> <span class="bld">79</span>  (<span class="grn">+21</span>)</pre>
+            </div>
+            <div>
+                <h3>2. Preview improvements</h3>
+                <pre><span class="cmd">$ claude-native --diff</span>
+
+<span class="bld">  Score Diff (current -> after --fix)</span>
+
+  <span class="bld">Foundation</span>             30 -> 100  (<span class="grn">+70</span>)
+  <span class="bld">Context Efficiency</span>     95 -> 95   (  0)
+  <span class="bld">Navigation</span>             92 -> 92   (  0)
+  <span class="bld">Tooling</span>                70 -> 88   (<span class="grn">+18</span>)
+  <span class="bld">Code Quality</span>           42 -> 42   (  0)
+
+  <span class="bld">TOTAL</span>                  62 -> 79   (<span class="grn bld">+17</span>)  C -> B</pre>
+
+                <h3>4. Bootstrap a new project</h3>
+                <pre><span class="cmd">$ claude-native --init</span>
+
+<span class="grn bld">Created Claude Native files:</span>
+  <span class="grn">+</span> CLAUDE.md
+  <span class="grn">+</span> .claudeignore
+  <span class="grn">+</span> .claude/settings.json
+
+Detected: <span class="bld">Mobile (Flutter)</span>
+Run <span class="bld">claude-native</span> to see your score.</pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 10 Commandments -->
+<section class="code-section">
+    <div class="container" style="max-width:800px;">
+        <div class="section-label">Philosophy</div>
+        <div class="section-title">The 10 Commandments of Claude Native</div>
+        <div style="margin-top:2rem;">
+            <ol style="list-style:none;counter-reset:cmd;">
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">01</span>
+                    <strong>Have a CLAUDE.md</strong> <span style="color:var(--text-secondary);">— concise, actionable, &lt;200 lines</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">02</span>
+                    <strong>Ignore the noise</strong> <span style="color:var(--text-secondary);">— .claudeignore for deps, builds, generated files</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">03</span>
+                    <strong>Keep files small</strong> <span style="color:var(--text-secondary);">— &lt;500 lines per file, &lt;80 lines per function</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">04</span>
+                    <strong>Name things clearly</strong> <span style="color:var(--text-secondary);">— descriptive, consistent naming everywhere</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">05</span>
+                    <strong>Write tests</strong> <span style="color:var(--text-secondary);">— Claude's primary way to verify its own work</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">06</span>
+                    <strong>Be consistent</strong> <span style="color:var(--text-secondary);">— one pattern per concern, applied everywhere</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">07</span>
+                    <strong>Use types</strong> <span style="color:var(--text-secondary);">— contracts Claude can reason about</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">08</span>
+                    <strong>Structure logically</strong> <span style="color:var(--text-secondary);">— clear directories, obvious entry points</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">09</span>
+                    <strong>Automate guardrails</strong> <span style="color:var(--text-secondary);">— hooks for formatting, permissions for safe commands</span>
+                </li>
+                <li style="counter-increment:cmd;margin-bottom:1rem;padding-left:2.5rem;position:relative;">
+                    <span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-size:0.85rem;">10</span>
+                    <strong>Separate concerns</strong> <span style="color:var(--text-secondary);">— rules/ for guidance, skills for workflows, CLAUDE.md for essentials</span>
+                </li>
+            </ol>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <p>
+        <a href="https://github.com/viveky259259/claude-native">GitHub</a> &middot;
+        <a href="https://crates.io/crates/claude-native">crates.io</a> &middot;
+        MIT License
+    </p>
+    <p style="margin-top:0.5rem;">Built with Claude Opus 4.6</p>
+</footer>
+
+</body>
+</html>
