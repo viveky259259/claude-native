@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(cargo fix:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo run:*)",
+      "Read(//Users/vivekyadav/Documents/Projects/claude/claude_native_projects/**)",
+      "Bash(ls tests/*.rs)",
+      "Bash(find src:*)",
+      "Bash(xargs -I{} echo \"{} test lines\")"
+    ]
+  }
+}
