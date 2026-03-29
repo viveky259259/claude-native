@@ -7,6 +7,8 @@ Rust CLI that scans a project and scores how "Claude Native" it is.
 ```
 cargo build
 cargo test
+cargo test --test <name>        # Test single file
+cargo test <module>::            # Test single module
 cargo run -- /path/to/project
 cargo run -- . -o json
 ```

@@ -9,6 +9,9 @@ pub mod tooling;
 pub mod quality;
 pub mod quality_extra;
 pub mod project_specific;
+pub mod token_checks;
+pub mod token_rules;
+pub mod token_suggestions;
 
 use crate::detection::ProjectType;
 use crate::scan::ProjectContext;
@@ -271,6 +274,19 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
 
     // Project-specific rules (filtered by applies_to at runtime)
     rules.extend(project_specific::project_specific_rules());
+
+    // Token optimization rules (7.x)
+    rules.push(Box::new(token_rules::ClaudeMdReadmeDuplication));
+    rules.push(Box::new(token_rules::NarrowRuleScopes));
+    rules.push(Box::new(token_rules::TargetedTestCommand));
+    rules.push(Box::new(token_rules::TestOutputFilteringHook));
+    rules.push(Box::new(token_rules::ArchDecisionRecords));
+    rules.push(Box::new(token_suggestions::LanguageAwareIndexFiles));
+    rules.push(Box::new(token_suggestions::PublicApiAtTop));
+    rules.push(Box::new(token_suggestions::CircularDependencyCheck));
+    rules.push(Box::new(token_suggestions::ScatteredCodeCrossRefs));
+    rules.push(Box::new(token_checks::MixedGeneratedCode));
+    rules.push(Box::new(token_checks::MemoryDirectoryExists));
 
     rules
 }
