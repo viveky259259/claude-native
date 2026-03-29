@@ -4,6 +4,8 @@ use std::path::Path;
 use anyhow::Result;
 use owo_colors::OwoColorize;
 
+// ── Public API ──────────────────────────────────────────────────────
+
 /// Generate and install a pre-commit hook that checks claude-native score.
 pub fn install_hook(root: &Path, min_score: u32) -> Result<()> {
     let hooks_dir = root.join(".git").join("hooks");
@@ -13,10 +15,8 @@ pub fn install_hook(root: &Path, min_score: u32) -> Result<()> {
 
     let hook_path = hooks_dir.join("pre-commit");
     let script = generate_hook_script(min_score);
-
     fs::write(&hook_path, script)?;
 
-    // Make executable on Unix
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -31,6 +31,22 @@ pub fn install_hook(root: &Path, min_score: u32) -> Result<()> {
     Ok(())
 }
 
+/// Print the pre-commit config for .pre-commit-config.yaml integration.
+pub fn print_precommit_config() {
+    println!("Add to .pre-commit-config.yaml:");
+    println!();
+    println!("  - repo: local");
+    println!("    hooks:");
+    println!("      - id: claude-native");
+    println!("        name: Claude Native Score Check");
+    println!("        entry: claude-native");
+    println!("        language: system");
+    println!("        pass_filenames: false");
+    println!("        always_run: true");
+}
+
+// ── Private helpers ─────────────────────────────────────────────────
+
 fn generate_hook_script(min_score: u32) -> String {
     format!(
         r#"#!/bin/sh
@@ -39,7 +55,7 @@ fn generate_hook_script(min_score: u32) -> String {
 
 if ! command -v claude-native &> /dev/null; then
     echo "claude-native not found. Install: cargo install claude-native"
-    exit 0  # Don't block if tool isn't installed
+    exit 0
 fi
 
 SCORE=$(claude-native -o json 2>/dev/null | grep '"score"' | head -1 | sed 's/[^0-9.]//g' | cut -d. -f1)
@@ -61,18 +77,4 @@ echo "claude-native: score $SCORE (>= {min_score}) OK"
 exit 0
 "#
     )
-}
-
-/// Print the pre-commit config for .pre-commit-config.yaml integration.
-pub fn print_precommit_config() {
-    println!("Add to .pre-commit-config.yaml:");
-    println!();
-    println!("  - repo: local");
-    println!("    hooks:");
-    println!("      - id: claude-native");
-    println!("        name: Claude Native Score Check");
-    println!("        entry: claude-native");
-    println!("        language: system");
-    println!("        pass_filenames: false");
-    println!("        always_run: true");
 }

@@ -45,6 +45,41 @@ pub fn init_project(ctx: &ProjectContext) -> Result<Vec<String>> {
     Ok(created)
 }
 
+pub fn detect_commands(_ctx: &ProjectContext, pt: Option<&ProjectType>) -> (&'static str, &'static str) {
+    match pt.map(|p| &p.primary) {
+        Some(PrimaryType::Mobile(MobileFramework::Flutter)) => ("flutter build", "flutter test"),
+        Some(PrimaryType::Mobile(MobileFramework::ReactNative)) => ("npm run build", "npm test"),
+        Some(PrimaryType::Mobile(MobileFramework::IosNative)) => ("swift build", "swift test"),
+        Some(PrimaryType::Mobile(MobileFramework::AndroidNative)) => ("./gradlew assembleDebug", "./gradlew test"),
+        Some(PrimaryType::Frontend(FrontendFramework::NextJs)) => ("npm run build", "npm test"),
+        Some(PrimaryType::Frontend(_)) => ("npm run build", "npm test"),
+        Some(PrimaryType::Backend(BackendFramework::Django)) => ("python manage.py check", "python manage.py test"),
+        Some(PrimaryType::Backend(BackendFramework::Rails)) => ("rails db:migrate", "rails test"),
+        Some(PrimaryType::Backend(BackendFramework::Express)) => ("npm run build", "npm test"),
+        Some(PrimaryType::Backend(BackendFramework::GoService)) => ("go build ./...", "go test ./..."),
+        Some(PrimaryType::Backend(BackendFramework::RustService)) => ("cargo build", "cargo test"),
+        Some(PrimaryType::Backend(BackendFramework::Phoenix)) => ("mix compile", "mix test"),
+        Some(PrimaryType::IaC(IaCTool::Terraform)) => ("terraform validate", "terraform test"),
+        Some(PrimaryType::IaC(IaCTool::Helm)) => ("helm lint .", "helm template . | kubeval"),
+        Some(PrimaryType::Serverless(_)) => ("sam build", "sam local invoke"),
+        Some(PrimaryType::ML) => ("pip install -e .", "pytest"),
+        Some(PrimaryType::DocSite(_)) => ("npm run build", "npm run build"),
+        Some(PrimaryType::GameDev(GameEngine::Godot)) => ("godot --export", "godot --test"),
+        Some(PrimaryType::GameDev(GameEngine::Bevy)) => ("cargo build", "cargo test"),
+        _ => detect_commands_from_manifests(),
+    }
+}
+
+fn detect_commands_from_manifests() -> (&'static str, &'static str) {
+    if std::path::Path::new("Cargo.toml").exists() { ("cargo build", "cargo test") }
+    else if std::path::Path::new("package.json").exists() { ("npm run build", "npm test") }
+    else if std::path::Path::new("go.mod").exists() { ("go build ./...", "go test ./...") }
+    else if std::path::Path::new("requirements.txt").exists() { ("pip install -e .", "pytest") }
+    else { ("make build", "make test") }
+}
+
+// ── Private helpers below ───────────────────────────────────────────
+
 fn generate_agents_md(ctx: &ProjectContext, pt: Option<&ProjectType>) -> String {
     let project_name = ctx.root.file_name()
         .and_then(|n| n.to_str())
@@ -95,44 +130,6 @@ fn generate_claude_md(ctx: &ProjectContext, pt: Option<&ProjectType>) -> String 
          \n\
          <!-- Document error handling, data access, and API conventions here -->\n"
     )
-}
-
-pub fn detect_commands(_ctx: &ProjectContext, pt: Option<&ProjectType>) -> (&'static str, &'static str) {
-    match pt.map(|p| &p.primary) {
-        Some(PrimaryType::Mobile(MobileFramework::Flutter)) => ("flutter build", "flutter test"),
-        Some(PrimaryType::Mobile(MobileFramework::ReactNative)) => ("npm run build", "npm test"),
-        Some(PrimaryType::Mobile(MobileFramework::IosNative)) => ("swift build", "swift test"),
-        Some(PrimaryType::Mobile(MobileFramework::AndroidNative)) => ("./gradlew assembleDebug", "./gradlew test"),
-        Some(PrimaryType::Frontend(FrontendFramework::NextJs)) => ("npm run build", "npm test"),
-        Some(PrimaryType::Frontend(_)) => ("npm run build", "npm test"),
-        Some(PrimaryType::Backend(BackendFramework::Django)) => ("python manage.py check", "python manage.py test"),
-        Some(PrimaryType::Backend(BackendFramework::Rails)) => ("rails db:migrate", "rails test"),
-        Some(PrimaryType::Backend(BackendFramework::Express)) => ("npm run build", "npm test"),
-        Some(PrimaryType::Backend(BackendFramework::GoService)) => ("go build ./...", "go test ./..."),
-        Some(PrimaryType::Backend(BackendFramework::RustService)) => ("cargo build", "cargo test"),
-        Some(PrimaryType::Backend(BackendFramework::Phoenix)) => ("mix compile", "mix test"),
-        Some(PrimaryType::IaC(IaCTool::Terraform)) => ("terraform validate", "terraform test"),
-        Some(PrimaryType::IaC(IaCTool::Helm)) => ("helm lint .", "helm template . | kubeval"),
-        Some(PrimaryType::Serverless(_)) => ("sam build", "sam local invoke"),
-        Some(PrimaryType::ML) => ("pip install -e .", "pytest"),
-        Some(PrimaryType::DocSite(_)) => ("npm run build", "npm run build"),
-        Some(PrimaryType::GameDev(GameEngine::Godot)) => ("godot --export", "godot --test"),
-        Some(PrimaryType::GameDev(GameEngine::Bevy)) => ("cargo build", "cargo test"),
-        _ => {
-            // Detect from manifests
-            if std::path::Path::new("Cargo.toml").exists() {
-                ("cargo build", "cargo test")
-            } else if std::path::Path::new("package.json").exists() {
-                ("npm run build", "npm test")
-            } else if std::path::Path::new("go.mod").exists() {
-                ("go build ./...", "go test ./...")
-            } else if std::path::Path::new("requirements.txt").exists() {
-                ("pip install -e .", "pytest")
-            } else {
-                ("make build", "make test")
-            }
-        }
-    }
 }
 
 fn generate_claudeignore(_ctx: &ProjectContext, pt: Option<&ProjectType>) -> String {

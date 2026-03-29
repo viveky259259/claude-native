@@ -75,11 +75,18 @@ fn expected_index_files(langs: &[Language]) -> Vec<&'static str> {
 fn significant_source_dirs(ctx: &ProjectContext) -> Vec<std::path::PathBuf> {
     use std::collections::HashMap;
     let skip = [".claude", ".github", "tests", "test", "docs", "examples", "target"];
+    let code_exts = ["rs", "ts", "tsx", "js", "py", "go", "dart", "kt", "java", "rb", "cs", "swift"];
     let mut counts: HashMap<std::path::PathBuf, usize> = HashMap::new();
 
     for f in ctx.source_files() {
+        let is_code = f.path.extension().and_then(|e| e.to_str())
+            .map(|e| code_exts.contains(&e)).unwrap_or(false);
+        if !is_code { continue; }
         if let Some(parent) = f.path.parent() {
             if parent == ctx.root { continue; }
+            // Skip src/ root — it uses lib.rs as crate entry, not mod.rs
+            if parent.file_name().map(|n| n == "src").unwrap_or(false)
+                && parent.parent().map(|p| p == ctx.root).unwrap_or(false) { continue; }
             let name = parent.file_name().and_then(|n| n.to_str()).unwrap_or("");
             if name.starts_with('.') || skip.contains(&name) { continue; }
             *counts.entry(parent.to_path_buf()).or_insert(0) += 1;
@@ -133,23 +140,29 @@ impl Rule for PublicApiAtTop {
 }
 
 fn has_buried_public_api(content: &str) -> bool {
+    // Skip files that are primarily trait implementations (e.g., Rule trait impls)
+    // These naturally have helpers before pub structs — that's fine.
+    if content.contains("impl Rule for") || content.contains("impl Handler for") {
+        return false;
+    }
+
     let mut first_private_line: Option<usize> = None;
     let mut last_public_line: Option<usize> = None;
 
     for (i, line) in content.lines().enumerate() {
         let t = line.trim();
-        // Detect public markers
-        if t.starts_with("pub fn ") || t.starts_with("pub struct ")
+        // Only count standalone pub fn/struct at module level (not inside impl blocks)
+        if (t.starts_with("pub fn ") || t.starts_with("pub struct ")
             || t.starts_with("pub enum ") || t.starts_with("pub type ")
-            || t.starts_with("export ") || t.starts_with("export default")
+            || t.starts_with("export ") || t.starts_with("export default"))
+            && !t.contains("(&self")  // skip methods inside impl blocks
         {
             last_public_line = Some(i);
         }
-        // Detect private markers (non-pub function definitions)
-        if (t.starts_with("fn ") && !t.starts_with("fn main"))
-            || t.starts_with("struct ") || t.starts_with("enum ")
+        // Private standalone functions (not methods)
+        if (t.starts_with("fn ") && !t.starts_with("fn main") && !t.contains("(&self"))
+            || (t.starts_with("struct ") && !t.starts_with("pub"))
             || (t.starts_with("def ") && !t.starts_with("def _"))
-            || t.starts_with("function ") || t.starts_with("const _")
         {
             if first_private_line.is_none() {
                 first_private_line = Some(i);
@@ -157,9 +170,8 @@ fn has_buried_public_api(content: &str) -> bool {
         }
     }
 
-    // If last public line is significantly after first private line
     match (first_private_line, last_public_line) {
-        (Some(priv_line), Some(pub_line)) => pub_line > priv_line + 20,
+        (Some(priv_line), Some(pub_line)) => pub_line > priv_line + 30,
         _ => false,
     }
 }
