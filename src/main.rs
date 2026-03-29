@@ -21,83 +21,33 @@ fn run() -> Result<()> {
         anyhow::bail!("{} is not a directory", path.display());
     }
 
-    // --hook: install pre-commit hook
-    if let Some(min_score) = cli.hook {
-        return hooks::install_hook(&path, min_score);
-    }
+    // Modes that don't need full scanning
+    if let Some(min_score) = cli.hook { return hooks::install_hook(&path, min_score); }
+    if cli.mcp { return mcp::serve(); }
+    if cli.watch { return watch::watch_and_score(&path); }
+    if cli.diff { return diff::show_diff(&path); }
 
-    // --mcp: run as MCP server
-    if cli.mcp {
-        return mcp::serve();
-    }
-
-    // --watch: live re-scoring loop
-    if cli.watch {
-        return watch::watch_and_score(&path);
-    }
-
-    // --diff: show before/after comparison
-    if cli.diff {
-        return diff::show_diff(&path);
-    }
-
+    // Scan and detect
     let mut ctx = scan::build_context(&path)?;
     let pt = detection::detect(&ctx);
     ctx.project_type = Some(pt.clone());
 
-    // --init-all: bootstrap for all AI tools
-    if cli.init_all {
-        let created = multi_tool::generate_all(&ctx)?;
-        if created.is_empty() {
-            println!("{}", "All config files already exist.".dimmed());
-        } else {
-            println!("{}", "Created configs for Claude, Cursor, and Copilot:".green().bold());
-            for f in &created { println!("  {} {f}", "+".green()); }
-        }
-        return Ok(());
+    // Init modes
+    if cli.init_all { return run_init_all(&ctx); }
+    if cli.init { return run_init(&ctx, &pt); }
+
+    // Score and output
+    run_score_and_output(&cli, &ctx, &pt, &path)
+}
+
+fn run_init_all(ctx: &scan::ProjectContext) -> Result<()> {
+    let created = multi_tool::generate_all(ctx)?;
+    if created.is_empty() {
+        println!("{}", "All config files already exist.".dimmed());
+    } else {
+        println!("{}", "Created configs for Claude, Cursor, and Copilot:".green().bold());
+        for f in &created { println!("  {} {f}", "+".green()); }
     }
-
-    // --init: bootstrap Claude files
-    if cli.init {
-        return run_init(&ctx, &pt);
-    }
-
-    // Load config
-    let cfg = config::Config::load(&path);
-    let disabled = cfg.disabled_set();
-
-    // Score the project
-    let all = rules::all_rules();
-    let results: Vec<_> = all.iter()
-        .filter(|r| r.applies_to(&pt) && !disabled.contains(r.id()))
-        .map(|r| r.check(&ctx))
-        .collect();
-    let mut scorecard = scoring::calculate(results, &pt);
-
-    // Enrich suggestions with token-cost estimates
-    token_cost::enrich_suggestions(&mut scorecard.suggestions, &scorecard.rule_results, &ctx);
-
-    // --fix: auto-apply quick wins
-    if cli.fix {
-        return run_fix(&ctx, &scorecard, &path);
-    }
-
-    // --badge: output shields.io badge URL
-    if cli.badge {
-        print_badge(&scorecard);
-        return Ok(());
-    }
-
-    // --history: record and show trend
-    if cli.history {
-        render_output(&scorecard, &cli.format)?;
-        history::record_and_show(&scorecard, &path)?;
-        return Ok(());
-    }
-
-    render_output(&scorecard, &cli.format)?;
-
-    if scorecard.total_score < 40.0 { process::exit(1); }
     Ok(())
 }
 
@@ -115,12 +65,38 @@ fn run_init(ctx: &scan::ProjectContext, pt: &detection::ProjectType) -> Result<(
     Ok(())
 }
 
-fn run_fix(
-    ctx: &scan::ProjectContext,
-    scorecard: &scoring::Scorecard,
-    path: &std::path::Path,
+fn run_score_and_output(
+    cli: &Cli, ctx: &scan::ProjectContext,
+    pt: &detection::ProjectType, path: &std::path::Path,
 ) -> Result<()> {
-    let actions = fix::apply_fixes(ctx, &scorecard.rule_results)?;
+    let cfg = config::Config::load(path);
+    let disabled = cfg.disabled_set();
+
+    let all = rules::all_rules();
+    let results: Vec<_> = all.iter()
+        .filter(|r| r.applies_to(pt) && !disabled.contains(r.id()))
+        .map(|r| r.check(ctx))
+        .collect();
+    let mut sc = scoring::calculate(results, pt);
+    token_cost::enrich_suggestions(&mut sc.suggestions, &sc.rule_results, ctx);
+
+    if cli.fix { return run_fix(ctx, &sc, path); }
+    if cli.badge { print_badge(&sc); return Ok(()); }
+    if cli.history {
+        render_output(&sc, &cli.format)?;
+        history::record_and_show(&sc, path)?;
+        return Ok(());
+    }
+
+    render_output(&sc, &cli.format)?;
+    if sc.total_score < 40.0 { process::exit(1); }
+    Ok(())
+}
+
+fn run_fix(
+    ctx: &scan::ProjectContext, sc: &scoring::Scorecard, path: &std::path::Path,
+) -> Result<()> {
+    let actions = fix::apply_fixes(ctx, &sc.rule_results)?;
     if actions.is_empty() {
         println!("{}", "Nothing to fix — all quick wins already applied.".dimmed());
         return Ok(());
@@ -128,7 +104,6 @@ fn run_fix(
     println!("{}", "Applied fixes:".green().bold());
     for a in &actions { println!("  {} {a}", "+".green()); }
 
-    // Re-score to show improvement
     println!();
     let mut new_ctx = scan::build_context(path)?;
     let new_pt = detection::detect(&new_ctx);
@@ -138,14 +113,9 @@ fn run_fix(
         .map(|r| r.check(&new_ctx))
         .collect();
     let new_sc = scoring::calculate(new_results, &new_pt);
-
-    let delta = new_sc.total_score - scorecard.total_score;
-    println!(
-        "Score: {:.0} → {}  ({})",
-        scorecard.total_score,
-        format!("{:.0}", new_sc.total_score).bold(),
-        format!("+{:.0}", delta).green(),
-    );
+    let delta = new_sc.total_score - sc.total_score;
+    println!("Score: {:.0} -> {}  ({})", sc.total_score,
+        format!("{:.0}", new_sc.total_score).bold(), format!("+{:.0}", delta).green());
     Ok(())
 }
 
@@ -159,18 +129,8 @@ fn print_badge(sc: &scoring::Scorecard) {
         scoring::Grade::D => "orange",
         scoring::Grade::F => "red",
     };
-    let label = "claude--native";
-    let message = format!("{grade}%20({score}%2F100)");
-    let url = format!("https://img.shields.io/badge/{label}-{message}-{color}");
-
-    println!("Badge URL:");
-    println!("  {url}");
-    println!();
-    println!("Markdown:");
-    println!("  ![Claude Native Score]({url})");
-    println!();
-    println!("HTML:");
-    println!("  <img src=\"{url}\" alt=\"Claude Native Score\">");
+    let url = format!("https://img.shields.io/badge/claude--native-{grade}%20({score}%2F100)-{color}");
+    println!("Badge URL:\n  {url}\n\nMarkdown:\n  ![Claude Native Score]({url})\n\nHTML:\n  <img src=\"{url}\" alt=\"Claude Native Score\">");
 }
 
 fn render_output(sc: &scoring::Scorecard, fmt: &OutputFormat) -> Result<()> {

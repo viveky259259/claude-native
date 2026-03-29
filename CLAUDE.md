@@ -30,7 +30,7 @@ Scan → Detect → Rules → Score → Output pipeline:
 
 ## Adding a New Rule
 
-1. Create struct in the appropriate `src/rules/*.rs` file
+1. Create struct in the appropriate rules file under `src/rules/`
 2. Implement `Rule` trait (id, name, dimension, severity, check)
 3. Register in `all_rules()` in `src/rules/mod.rs` or `project_specific_rules()` in `src/rules/project_specific/mod.rs`
 4. Add test in `tests/`
