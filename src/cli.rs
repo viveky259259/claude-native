@@ -37,6 +37,22 @@ pub struct Cli {
     /// Output a shields.io badge URL for your README
     #[arg(long)]
     pub badge: bool,
+
+    /// Run as MCP server (JSON-RPC over stdio)
+    #[arg(long)]
+    pub mcp: bool,
+
+    /// Install pre-commit hook (blocks commits below score threshold)
+    #[arg(long, value_name = "MIN_SCORE")]
+    pub hook: Option<u32>,
+
+    /// Like --init but also generates .cursorrules and copilot-instructions.md
+    #[arg(long)]
+    pub init_all: bool,
+
+    /// Record score to .claude-native-history.json and show trend
+    #[arg(long)]
+    pub history: bool,
 }
 
 #[derive(Debug, Clone, clap::ValueEnum)]

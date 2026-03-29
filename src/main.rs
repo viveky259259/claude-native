@@ -5,7 +5,7 @@ use clap::Parser;
 use owo_colors::OwoColorize;
 
 use claude_native::cli::{Cli, OutputFormat};
-use claude_native::{config, detection, diff, fix, init, output, rules, scan, scoring, token_cost, watch};
+use claude_native::{config, detection, diff, fix, history, hooks, init, mcp, multi_tool, output, rules, scan, scoring, token_cost, watch};
 
 fn main() {
     if let Err(e) = run() {
@@ -19,6 +19,16 @@ fn run() -> Result<()> {
     let path = cli.path.canonicalize().unwrap_or_else(|_| cli.path.clone());
     if !path.is_dir() {
         anyhow::bail!("{} is not a directory", path.display());
+    }
+
+    // --hook: install pre-commit hook
+    if let Some(min_score) = cli.hook {
+        return hooks::install_hook(&path, min_score);
+    }
+
+    // --mcp: run as MCP server
+    if cli.mcp {
+        return mcp::serve();
     }
 
     // --watch: live re-scoring loop
@@ -35,7 +45,19 @@ fn run() -> Result<()> {
     let pt = detection::detect(&ctx);
     ctx.project_type = Some(pt.clone());
 
-    // --init: bootstrap files
+    // --init-all: bootstrap for all AI tools
+    if cli.init_all {
+        let created = multi_tool::generate_all(&ctx)?;
+        if created.is_empty() {
+            println!("{}", "All config files already exist.".dimmed());
+        } else {
+            println!("{}", "Created configs for Claude, Cursor, and Copilot:".green().bold());
+            for f in &created { println!("  {} {f}", "+".green()); }
+        }
+        return Ok(());
+    }
+
+    // --init: bootstrap Claude files
     if cli.init {
         return run_init(&ctx, &pt);
     }
@@ -63,6 +85,13 @@ fn run() -> Result<()> {
     // --badge: output shields.io badge URL
     if cli.badge {
         print_badge(&scorecard);
+        return Ok(());
+    }
+
+    // --history: record and show trend
+    if cli.history {
+        render_output(&scorecard, &cli.format)?;
+        history::record_and_show(&scorecard, &path)?;
         return Ok(());
     }
 

@@ -97,7 +97,7 @@ fn generate_claude_md(ctx: &ProjectContext, pt: Option<&ProjectType>) -> String 
     )
 }
 
-fn detect_commands(_ctx: &ProjectContext, pt: Option<&ProjectType>) -> (&'static str, &'static str) {
+pub fn detect_commands(_ctx: &ProjectContext, pt: Option<&ProjectType>) -> (&'static str, &'static str) {
     match pt.map(|p| &p.primary) {
         Some(PrimaryType::Mobile(MobileFramework::Flutter)) => ("flutter build", "flutter test"),
         Some(PrimaryType::Mobile(MobileFramework::ReactNative)) => ("npm run build", "npm test"),

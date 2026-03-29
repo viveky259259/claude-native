@@ -1,6 +1,7 @@
 pub mod foundation;
 pub mod foundation_extra;
 pub mod context;
+pub mod drift;
 pub mod context_extra;
 pub mod navigation;
 pub mod navigation_extra;
@@ -225,6 +226,10 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
     rules.push(Box::new(foundation::ClaudeDirExists));
     rules.push(Box::new(foundation::SettingsJsonExists));
     rules.push(Box::new(foundation_extra::AgentsMdExists));
+
+    // Context drift (6.1 - 6.2)
+    rules.push(Box::new(drift::BuildCommandMatchesManifest));
+    rules.push(Box::new(drift::ReferencedFilesExist));
 
     // Context Efficiency (2.1 - 2.7)
     rules.push(Box::new(context::NoMegaFiles));
