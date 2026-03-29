@@ -173,3 +173,94 @@ impl Rule for DescriptiveNames {
         }
     }
 }
+
+// ── Rule 3.8: Folder-level CLAUDE.md for navigation ─────────────────
+
+pub struct FolderClaudeMds;
+
+impl Rule for FolderClaudeMds {
+    fn id(&self) -> &str { "3.8" }
+    fn name(&self) -> &str { "Folders have CLAUDE.md for navigation" }
+    fn dimension(&self) -> Dimension { Dimension::Navigation }
+    fn severity(&self) -> Severity { Severity::Medium }
+
+    fn check(&self, ctx: &ProjectContext) -> RuleResult {
+        // Only check source directories with 3+ source files
+        let source_dirs = find_source_dirs(ctx);
+        if source_dirs.is_empty() {
+            return self.pass();
+        }
+
+        let dirs_with_claude_md: Vec<_> = source_dirs.iter()
+            .filter(|d| d.join("CLAUDE.md").exists())
+            .collect();
+
+        let dirs_without: Vec<String> = source_dirs.iter()
+            .filter(|d| !d.join("CLAUDE.md").exists())
+            .filter_map(|d| d.strip_prefix(&ctx.root).ok())
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+
+        let ratio = dirs_with_claude_md.len() as f64 / source_dirs.len() as f64;
+
+        if ratio >= 0.7 {
+            self.pass()
+        } else if dirs_without.len() <= 2 {
+            self.warn(
+                &format!("{} folder(s) lack a CLAUDE.md: {}", dirs_without.len(), dirs_without.join(", ")),
+                Suggestion {
+                    priority: SuggestionPriority::NiceToHave,
+                    title: "Add CLAUDE.md to source folders".into(),
+                    description: format!(
+                        "Add a small CLAUDE.md (3-5 lines) to each folder explaining what it contains. \
+                         This lets Claude understand a folder's purpose by reading one file instead of scanning all files.\n\
+                         Missing in: {}", dirs_without.join(", ")
+                    ),
+                    effort: Effort::Minutes,
+                },
+            )
+        } else {
+            self.fail(
+                &format!("{}/{} source folders lack CLAUDE.md", dirs_without.len(), source_dirs.len()),
+                Suggestion {
+                    priority: SuggestionPriority::QuickWin,
+                    title: "Add CLAUDE.md to source folders".into(),
+                    description: format!(
+                        "Add a small CLAUDE.md (3-5 lines) to each source folder. Example:\n\
+                         ```\n\
+                         # rules/\n\
+                         Rule implementations. Each file = one scoring dimension.\n\
+                         All rules implement the `Rule` trait from mod.rs.\n\
+                         ```\n\
+                         This saves Claude ~500 tokens per folder by avoiding full file scans.\n\
+                         Missing in: {}", dirs_without.iter().take(5).cloned().collect::<Vec<_>>().join(", ")
+                    ),
+                    effort: Effort::Hour,
+                },
+            )
+        }
+    }
+}
+
+/// Find directories that contain 3+ source files (worth having a CLAUDE.md).
+fn find_source_dirs(ctx: &ProjectContext) -> Vec<std::path::PathBuf> {
+    use std::collections::HashMap;
+
+    let skip = [".claude", ".github", "tests", "test", "docs", "examples"];
+    let mut dir_counts: HashMap<std::path::PathBuf, usize> = HashMap::new();
+
+    for f in ctx.source_files() {
+        if let Some(parent) = f.path.parent() {
+            // Skip root and non-source dirs
+            if parent == ctx.root { continue; }
+            let dir_name = parent.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if dir_name.starts_with('.') || skip.contains(&dir_name) { continue; }
+            *dir_counts.entry(parent.to_path_buf()).or_insert(0) += 1;
+        }
+    }
+
+    dir_counts.into_iter()
+        .filter(|(_, count)| *count >= 3)
+        .map(|(path, _)| path)
+        .collect()
+}

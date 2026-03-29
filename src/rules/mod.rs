@@ -248,8 +248,9 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
     rules.push(Box::new(navigation_extra::PredictableTestLocations));
     rules.push(Box::new(navigation_extra::NoDeepNesting));
     rules.push(Box::new(navigation_extra::DescriptiveNames));
+    rules.push(Box::new(navigation_extra::FolderClaudeMds));
 
-    // Tooling (4.1 - 4.6)
+    // Tooling (4.1 - 4.7)
     rules.push(Box::new(tooling::McpServersConfigured));
     rules.push(Box::new(tooling::AutoFormatHook));
     rules.push(Box::new(tooling::DangerousOpProtection));
