@@ -25,7 +25,9 @@ impl Rule for BuildCommandMatchesManifest {
 
         let mentions_cargo = content.contains("cargo ");
         let mentions_npm = content.contains("npm ") || content.contains("npx ");
-        let mentions_go = content.contains("go build") || content.contains("go test");
+        // Use word boundary: "go build" but not "cargo build"
+        let mentions_go = content.contains(" go build") || content.contains(" go test")
+            || content.contains("`go ") || content.starts_with("go ");
         let mentions_python = content.contains("python ") || content.contains("pytest") || content.contains("pip ");
 
         let mismatches = check_mismatches(
