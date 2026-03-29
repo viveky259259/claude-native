@@ -13,8 +13,8 @@ impl Rule for ClearModuleBoundaries {
 
     fn check(&self, ctx: &ProjectContext) -> RuleResult {
         let index_patterns = [
-            "index.ts", "index.js", "index.tsx", "mod.rs",
-            "__init__.py", "index.dart",
+            "index.ts", "index.js", "index.tsx", "mod.rs", "lib.rs",
+            "__init__.py", "index.dart", "main.rs",
         ];
 
         let skip_dir_names = [".claude", ".github", "tests", "test", "spec", "examples", "docs"];

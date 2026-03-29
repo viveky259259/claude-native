@@ -283,8 +283,8 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
     rules.push(Box::new(token_rules::ArchDecisionRecords));
     rules.push(Box::new(token_suggestions::LanguageAwareIndexFiles));
     rules.push(Box::new(token_suggestions::PublicApiAtTop));
-    rules.push(Box::new(token_suggestions::CircularDependencyCheck));
-    rules.push(Box::new(token_suggestions::ScatteredCodeCrossRefs));
+    rules.push(Box::new(token_checks::CircularDependencyCheck));
+    rules.push(Box::new(token_checks::ScatteredCodeCrossRefs));
     rules.push(Box::new(token_checks::MixedGeneratedCode));
     rules.push(Box::new(token_checks::MemoryDirectoryExists));
 

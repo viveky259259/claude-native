@@ -93,3 +93,109 @@ impl Rule for MemoryDirectoryExists {
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// R6: Circular dependency detection
+// ═══════════════════════════════════════════════════════════════════
+
+pub struct CircularDependencyCheck;
+
+impl Rule for CircularDependencyCheck {
+    fn id(&self) -> &str { "7.8" }
+    fn name(&self) -> &str { "No circular dependencies detected" }
+    fn dimension(&self) -> Dimension { Dimension::Navigation }
+    fn severity(&self) -> Severity { Severity::Low }
+
+    fn check(&self, ctx: &ProjectContext) -> RuleResult {
+        let cycles = find_simple_cycles(ctx);
+        if cycles.is_empty() { self.pass() }
+        else {
+            self.warn(
+                &format!("{} potential circular dep(s)", cycles.len()),
+                Suggestion {
+                    priority: SuggestionPriority::NiceToHave,
+                    title: "Review circular dependencies".into(),
+                    description: format!("Found:\n{}", cycles.iter().take(3).cloned().collect::<Vec<_>>().join("\n")),
+                    effort: Effort::HalfDay,
+                },
+            )
+        }
+    }
+}
+
+fn find_simple_cycles(ctx: &ProjectContext) -> Vec<String> {
+    let mut cycles = Vec::new();
+    let source = ctx.source_files();
+    let files: Vec<_> = source.iter().filter(|f| f.line_count > 10).take(30).collect();
+    for (i, a) in files.iter().enumerate() {
+        let a_name = a.relative_path.file_stem().and_then(|n| n.to_str()).unwrap_or("");
+        let a_content = std::fs::read_to_string(&a.path).unwrap_or_default();
+        for b in files.iter().skip(i + 1) {
+            let b_name = b.relative_path.file_stem().and_then(|n| n.to_str()).unwrap_or("");
+            let b_content = std::fs::read_to_string(&b.path).unwrap_or_default();
+            if has_import(&a_content, b_name) && has_import(&b_content, a_name) {
+                cycles.push(format!("  {} <-> {}", a.relative_path.display(), b.relative_path.display()));
+            }
+        }
+    }
+    cycles
+}
+
+fn has_import(content: &str, module: &str) -> bool {
+    content.lines().any(|l| {
+        let t = l.trim();
+        (t.starts_with("use ") || t.starts_with("import ") || t.starts_with("from ")) && t.contains(module)
+    })
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// R7: Scattered code cross-references
+// ═══════════════════════════════════════════════════════════════════
+
+pub struct ScatteredCodeCrossRefs;
+
+impl Rule for ScatteredCodeCrossRefs {
+    fn id(&self) -> &str { "7.9" }
+    fn name(&self) -> &str { "Scattered code has cross-references" }
+    fn dimension(&self) -> Dimension { Dimension::Navigation }
+    fn severity(&self) -> Severity { Severity::Low }
+
+    fn check(&self, ctx: &ProjectContext) -> RuleResult {
+        let scattered = find_scattered_concepts(ctx);
+        if scattered.is_empty() { return self.pass(); }
+        let has_cross_refs = ctx.subdirectory_claude_mds.iter().any(|p| {
+            let c = std::fs::read_to_string(p).unwrap_or_default().to_lowercase();
+            c.contains("also in") || c.contains("related:") || c.contains("see also")
+        });
+        if has_cross_refs { self.pass() }
+        else {
+            self.warn(
+                &format!("Scattered: {}", scattered.join(", ")),
+                Suggestion {
+                    priority: SuggestionPriority::NiceToHave,
+                    title: "Add cross-references for scattered code".into(),
+                    description: "Add 'also in:' references in folder CLAUDE.md files.".into(),
+                    effort: Effort::Minutes,
+                },
+            )
+        }
+    }
+}
+
+fn find_scattered_concepts(ctx: &ProjectContext) -> Vec<String> {
+    use std::collections::{HashMap, HashSet};
+    let skip = ["mod", "index", "lib", "main", "test", "CLAUDE"];
+    let mut concept_dirs: HashMap<String, HashSet<String>> = HashMap::new();
+    for f in ctx.source_files() {
+        let stem = f.path.file_stem().and_then(|n| n.to_str()).unwrap_or("");
+        let dir = f.path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()).unwrap_or("");
+        let concept = stem.split('_').next().unwrap_or(stem);
+        if concept.len() < 3 || skip.contains(&concept) { continue; }
+        concept_dirs.entry(concept.to_string()).or_default().insert(dir.to_string());
+    }
+    concept_dirs.into_iter()
+        .filter(|(_, dirs)| dirs.len() >= 3)
+        .map(|(c, _)| c)
+        .take(5)
+        .collect()
+}
